@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "io_map.c"
+        "plc_scan.c"
+        "plc_time.c"
+        "ld_program.c"
+	"ladder.c"
+    INCLUDE_DIRS
+        "."
+)
