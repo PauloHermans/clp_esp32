@@ -16,7 +16,6 @@
  * A atualização física ocorre no final do ciclo de scan.
  */
 
-
 #include "io_map.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
@@ -24,115 +23,207 @@
 /* Tag para logs */
 static const char *TAG = "io_map";
 
-/* ================================
+/* ============================================================
  * DOUBLE BUFFER - ENTRADAS
- * ================================ */
+ * ============================================================ */
 
-/* Usado pelo PLC (core 1) */
+/* Buffer usado exclusivamente pelo PLC (core 1) */
 static bool di_buffer_plc[NUM_DI] = {0};
 
-/* Usado pela comunicação (core 0) */
+/* Snapshot usado pela comunicação (core 0) */
 static bool di_buffer_com[NUM_DI] = {0};
 
-/* ================================
+/* ============================================================
  * DOUBLE BUFFER - SAÍDAS
- * ================================ */
+ * ============================================================ */
 
 /* Escrito pelo PLC */
 static bool do_buffer_plc[NUM_DO] = {0};
 
-/* Visível para comunicação + hardware */
+/* Visível para comunicação e hardware */
 static bool do_buffer_com[NUM_DO] = {0};
 
-/* ================================
- * MAPEAMENTO FÍSICO DOS PINOS
- * ================================ */
+/* ============================================================
+ * ABSTRAÇÃO DE HARDWARE
+ * ============================================================ */
 
-/* Entradas digitais (ativo ALTO agora) */
-static const gpio_num_t di_pins[NUM_DI] = {
-    GPIO_NUM_16,
-    GPIO_NUM_17,
-    GPIO_NUM_18,
-    GPIO_NUM_19,
-    GPIO_NUM_21,
-    GPIO_NUM_22
+/* Tipos de interface possíveis */
+typedef enum {
+    IO_TYPE_GPIO,
+    IO_TYPE_I2C,
+    IO_TYPE_SHIFTREG
+} io_type_t;
+
+/* Estrutura genérica de mapeamento */
+typedef struct {
+    io_type_t type;
+
+    union {
+        gpio_num_t gpio;
+
+        struct {
+            uint8_t device;
+            uint8_t pin;
+        } i2c;
+
+        struct {
+            uint8_t bit;
+        } shift;
+
+    } hw;
+
+} io_map_entry_t;
+
+/* ============================================================
+ * MAPEAMENTO DOS CANAIS (FACILMENTE EXPANSÍVEL)
+ * ============================================================ */
+
+/* Entradas digitais */
+static const io_map_entry_t di_map[NUM_DI] = {
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_16 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_17 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_18 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_19 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_21 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_22 }
 };
 
 /* Saídas digitais */
-static const gpio_num_t do_pins[NUM_DO] = {
-    GPIO_NUM_23,
-    GPIO_NUM_25,
-    GPIO_NUM_26,
-    GPIO_NUM_27,
-    GPIO_NUM_32,
-    GPIO_NUM_33
+static const io_map_entry_t do_map[NUM_DO] = {
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_25 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_26 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 }
 };
+
+/* ============================================================
+ * LEITURA FÍSICA (GENÉRICA)
+ * ============================================================ */
+
+static bool read_physical_input(uint8_t ch)
+{
+    const io_map_entry_t *e = &di_map[ch];
+
+    switch (e->type) {
+
+        case IO_TYPE_GPIO:
+            /* Entrada ativa em nível alto */
+            return gpio_get_level(e->hw.gpio);
+
+        case IO_TYPE_I2C:
+            /* FUTURO: implementar driver */
+            // return i2c_expander_read(e->hw.i2c.device, e->hw.i2c.pin);
+            return false;
+
+        case IO_TYPE_SHIFTREG:
+            /* FUTURO: implementar driver */
+            // return shiftreg_read(e->hw.shift.bit);
+            return false;
+
+        default:
+            return false;
+    }
+}
+
+/* ============================================================
+ * ESCRITA FÍSICA (GENÉRICA)
+ * ============================================================ */
+
+static void write_physical_output(uint8_t ch, bool value)
+{
+    const io_map_entry_t *e = &do_map[ch];
+
+    switch (e->type) {
+
+        case IO_TYPE_GPIO:
+            gpio_set_level(e->hw.gpio, value ? 1 : 0);
+            break;
+
+        case IO_TYPE_I2C:
+            /* FUTURO */
+            // i2c_expander_write(...);
+            break;
+
+        case IO_TYPE_SHIFTREG:
+            /* FUTURO */
+            // shiftreg_write(...);
+            break;
+
+        default:
+            break;
+    }
+}
+
+/* ============================================================
+ * INICIALIZAÇÃO DO HARDWARE
+ * ============================================================ */
 
 void io_init(void)
 {
     gpio_config_t io_conf = {0};
 
     /* ================================
-     * ENTRADAS - PULLDOWN (IMPORTANTE)
+     * CONFIGURAÇÃO DAS ENTRADAS
      * ================================ */
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;  // evita flutuação
     io_conf.intr_type = GPIO_INTR_DISABLE;
 
-    for (int i = 0; i < NUM_DI; i++) {
-        io_conf.pin_bit_mask = 1ULL << di_pins[i];
-        gpio_config(&io_conf);
+    for (uint8_t i = 0; i < NUM_DI; i++) {
+        if (di_map[i].type == IO_TYPE_GPIO) {
+            io_conf.pin_bit_mask = 1ULL << di_map[i].hw.gpio;
+            gpio_config(&io_conf);
+        }
     }
 
     /* ================================
-     * SAÍDAS
+     * CONFIGURAÇÃO DAS SAÍDAS
      * ================================ */
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
-    for (int i = 0; i < NUM_DO; i++) {
-        io_conf.pin_bit_mask = 1ULL << do_pins[i];
-        gpio_config(&io_conf);
-        gpio_set_level(do_pins[i], 0);
+    for (uint8_t i = 0; i < NUM_DO; i++) {
+        if (do_map[i].type == IO_TYPE_GPIO) {
+            io_conf.pin_bit_mask = 1ULL << do_map[i].hw.gpio;
+            gpio_config(&io_conf);
+            gpio_set_level(do_map[i].hw.gpio, 0);
+        }
     }
 
     ESP_LOGI(TAG, "IO inicializado com sucesso");
 }
 
-/* ================================
- * ATUALIZAÇÃO DE ENTRADAS (SCAN)
- * ================================ */
+/* ============================================================
+ * ATUALIZAÇÃO DAS ENTRADAS (SCAN)
+ * ============================================================ */
+
 void di_update(void)
 {
     for (uint8_t i = 0; i < NUM_DI; i++) {
 
-        /* Leitura física (ativo alto) */
-        bool value = gpio_get_level(di_pins[i]) == 1;
+        bool value = read_physical_input(i);
 
-        /* PLC usa isso */
+        /* Atualiza buffer do PLC */
         di_buffer_plc[i] = value;
 
-        /* Comunicação usa snapshot */
+        /* Atualiza snapshot para comunicação */
         di_buffer_com[i] = value;
     }
 }
 
-/* ================================
- * LEITURA PELO PLC
- * ================================ */
+/* ============================================================
+ * INTERFACE DO PLC
+ * ============================================================ */
+
 bool di_read(uint8_t channel)
 {
-    if (channel >= NUM_DI) {
-        return false;
-    }
-
-    return di_buffer_plc[channel];
+    if (channel >= NUM_DI) return false;
+    return di_buffer_plc[channel;
 }
 
-/* ================================
- * ESCRITA PELO PLC
- * ================================ */
 void do_write(uint8_t channel, bool value)
 {
     if (channel < NUM_DO) {
@@ -143,43 +234,40 @@ void do_write(uint8_t channel, bool value)
 void do_write_all(uint32_t mask)
 {
     for (uint8_t i = 0; i < NUM_DO; i++) {
-        bool value = (mask >> i) & 0x01;
-        do_buffer_plc[i] = value;
+        do_buffer_plc[i] = (mask >> i) & 0x01;
     }
 }
 
-/* ================================
+/* ============================================================
  * APLICAÇÃO DAS SAÍDAS (SCAN)
- * ================================ */
+ * ============================================================ */
+
 void do_apply_outputs(void)
 {
-    /* PLC → comunicação */
+    /* Copia PLC → comunicação */
     for (uint8_t i = 0; i < NUM_DO; i++) {
         do_buffer_com[i] = do_buffer_plc[i];
     }
 
-    /* Comunicação → hardware */
+    /* Aplica no hardware */
     for (uint8_t i = 0; i < NUM_DO; i++) {
-        gpio_set_level(do_pins[i], do_buffer_com[i] ? 1 : 0);
+        write_physical_output(i, do_buffer_com[i]);
     }
 }
 
-/* ================================
- * LEITURA PARA COMUNICAÇÃO (CORE 0)
- * ================================ */
+/* ============================================================
+ * INTERFACE PARA COMUNICAÇÃO (CORE 0)
+ * ============================================================ */
+
 bool di_get(uint8_t channel)
 {
-    if (channel >= NUM_DI) {
-        return false;
-    }
+    if (channel >= NUM_DI) return false;
     return di_buffer_com[channel];
 }
 
 bool do_get(uint8_t channel)
 {
-    if (channel >= NUM_DO) {
-        return false;
-    }
+    if (channel >= NUM_DO) return false;
     return do_buffer_com[channel];
 }
 
