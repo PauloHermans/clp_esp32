@@ -44,4 +44,10 @@ void do_write_all(uint32_t mask);
 /* Aplica o buffer físico nas saídas */
 void do_apply_outputs(void);
 
+void di_update(void);
+
+bool di_get(uint8_t channel);
+
+bool do_get(uint8_t channel);
+
 #endif /* IO_MAP_H */

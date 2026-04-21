@@ -92,10 +92,13 @@ static void plc_scan_task(void *arg)
          * ================================ */
         plc_time_scan_start();
 
-        /* 1) Executa o programa ladder */
+        /* 1) Atualiza entradas */
+        di_update();
+
+        /* 2) Executa lógica */
         ld_program_cycle();
 
-        /* 2) Atualiza saídas físicas */
+        /* 3) Atualiza saídas */
         do_apply_outputs();
 
         /* ================================

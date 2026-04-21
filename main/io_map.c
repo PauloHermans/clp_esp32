@@ -16,6 +16,7 @@
  * A atualização física ocorre no final do ciclo de scan.
  */
 
+
 #include "io_map.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
@@ -23,14 +24,31 @@
 /* Tag para logs */
 static const char *TAG = "io_map";
 
-/* Buffer interno de saídas digitais */
-static volatile bool do_buffer[NUM_DO] = {0};
+/* ================================
+ * DOUBLE BUFFER - ENTRADAS
+ * ================================ */
+
+/* Usado pelo PLC (core 1) */
+static bool di_buffer_plc[NUM_DI] = {0};
+
+/* Usado pela comunicação (core 0) */
+static bool di_buffer_com[NUM_DI] = {0};
+
+/* ================================
+ * DOUBLE BUFFER - SAÍDAS
+ * ================================ */
+
+/* Escrito pelo PLC */
+static bool do_buffer_plc[NUM_DO] = {0};
+
+/* Visível para comunicação + hardware */
+static bool do_buffer_com[NUM_DO] = {0};
 
 /* ================================
  * MAPEAMENTO FÍSICO DOS PINOS
  * ================================ */
 
-/* Entradas digitais (ativas em nível baixo) */
+/* Entradas digitais (ativo ALTO agora) */
 static const gpio_num_t di_pins[NUM_DI] = {
     GPIO_NUM_16,
     GPIO_NUM_17,
@@ -54,10 +72,12 @@ void io_init(void)
 {
     gpio_config_t io_conf = {0};
 
-    /* Configuração das entradas */
+    /* ================================
+     * ENTRADAS - PULLDOWN (IMPORTANTE)
+     * ================================ */
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
     io_conf.intr_type = GPIO_INTR_DISABLE;
 
     for (int i = 0; i < NUM_DI; i++) {
@@ -65,7 +85,9 @@ void io_init(void)
         gpio_config(&io_conf);
     }
 
-    /* Configuração das saídas */
+    /* ================================
+     * SAÍDAS
+     * ================================ */
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
@@ -78,20 +100,43 @@ void io_init(void)
     ESP_LOGI(TAG, "IO inicializado com sucesso");
 }
 
+/* ================================
+ * ATUALIZAÇÃO DE ENTRADAS (SCAN)
+ * ================================ */
+void di_update(void)
+{
+    for (uint8_t i = 0; i < NUM_DI; i++) {
+
+        /* Leitura física (ativo alto) */
+        bool value = gpio_get_level(di_pins[i]) == 1;
+
+        /* PLC usa isso */
+        di_buffer_plc[i] = value;
+
+        /* Comunicação usa snapshot */
+        di_buffer_com[i] = value;
+    }
+}
+
+/* ================================
+ * LEITURA PELO PLC
+ * ================================ */
 bool di_read(uint8_t channel)
 {
     if (channel >= NUM_DI) {
         return false;
     }
 
-    /* Entrada ativa em nível baixo */
-    return gpio_get_level(di_pins[channel]) == 0;
+    return di_buffer_plc[channel];
 }
 
+/* ================================
+ * ESCRITA PELO PLC
+ * ================================ */
 void do_write(uint8_t channel, bool value)
 {
     if (channel < NUM_DO) {
-        do_buffer[channel] = value;
+        do_buffer_plc[channel] = value;
     }
 }
 
@@ -99,13 +144,43 @@ void do_write_all(uint32_t mask)
 {
     for (uint8_t i = 0; i < NUM_DO; i++) {
         bool value = (mask >> i) & 0x01;
-        do_buffer[i] = value;
+        do_buffer_plc[i] = value;
     }
 }
 
+/* ================================
+ * APLICAÇÃO DAS SAÍDAS (SCAN)
+ * ================================ */
 void do_apply_outputs(void)
 {
+    /* PLC → comunicação */
     for (uint8_t i = 0; i < NUM_DO; i++) {
-        gpio_set_level(do_pins[i], do_buffer[i] ? 1 : 0);
+        do_buffer_com[i] = do_buffer_plc[i];
+    }
+
+    /* Comunicação → hardware */
+    for (uint8_t i = 0; i < NUM_DO; i++) {
+        gpio_set_level(do_pins[i], do_buffer_com[i] ? 1 : 0);
     }
 }
+
+/* ================================
+ * LEITURA PARA COMUNICAÇÃO (CORE 0)
+ * ================================ */
+bool di_get(uint8_t channel)
+{
+    if (channel >= NUM_DI) {
+        return false;
+    }
+    return di_buffer_com[channel];
+}
+
+bool do_get(uint8_t channel)
+{
+    if (channel >= NUM_DO) {
+        return false;
+    }
+    return do_buffer_com[channel];
+}
+
+/* */
