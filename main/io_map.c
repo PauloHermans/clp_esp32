@@ -221,7 +221,7 @@ void di_update(void)
 bool di_read(uint8_t channel)
 {
     if (channel >= NUM_DI) return false;
-    return di_buffer_plc[channel;
+    return di_buffer_plc[channel];
 }
 
 void do_write(uint8_t channel, bool value)

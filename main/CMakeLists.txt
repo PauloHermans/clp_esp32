@@ -5,7 +5,14 @@ idf_component_register(
         "plc_scan.c"
         "plc_time.c"
         "ld_program.c"
-	"ladder.c"
+        "ladder.c"
+        "plc_coms.c"
     INCLUDE_DIRS
         "."
+    PRIV_REQUIRES
+        esp_driver_gpio
+        esp_timer
+        esp_wifi
+        esp_event
+        nvs_flash
 )

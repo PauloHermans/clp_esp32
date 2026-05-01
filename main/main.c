@@ -26,27 +26,13 @@
 #include "io_map.h"
 #include "plc_scan.h"
 #include "plc_time.h"
+#include "plc_coms.h"
 
 #include "esp_log.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+//#include "freertos/FreeRTOS.h"
+//#include "freertos/task.h"
 #include "driver/gpio.h"
-
-#define BLINK_GPIO GPIO_NUM_2  // ajuste conforme sua placa
-
-static void blink_task(void *arg)  //blink para verificação e uso do core 0
-{
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-
-    while (1) {
-        gpio_set_level(BLINK_GPIO, 1);
-        vTaskDelay(pdMS_TO_TICKS(250));
-
-        gpio_set_level(BLINK_GPIO, 0);
-        vTaskDelay(pdMS_TO_TICKS(250));
-    }
-}
 
 /* Tag para logs do módulo principal */
 static const char *TAG = "main";
@@ -89,15 +75,9 @@ void app_main(void)
      * ============================================================ */
     plc_scan_start();
 
-    xTaskCreatePinnedToCore(
-        blink_task,
-        "blink",
-        2048,
-        NULL,
-        1,      // prioridade baixa
-        NULL,
-        0       // CORE 0
-    );
+    /*
+    */
+    plc_coms_init();
 
     ESP_LOGI(TAG, "Sistema inicializado. Controle entregue ao ciclo de scan.");
 }
