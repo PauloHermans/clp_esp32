@@ -34,12 +34,6 @@ static uint8_t mb_di[NUM_DI];
 static uint8_t mb_do[NUM_DO];
 
 /* ============================================================ */
-/* CONTROLE DE CONEXÃO WIFI */
-/* ============================================================ */
-
-static bool wifi_connected = false;
-
-/* ============================================================ */
 /* WIFI EVENT HANDLER (PEGA IP) */
 /* ============================================================ */
 
@@ -51,7 +45,6 @@ static void wifi_event_handler(void *arg,
     if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "IP obtido: " IPSTR, IP2STR(&event->ip_info.ip));
-        wifi_connected = true;
     }
 }
 
@@ -101,52 +94,59 @@ static void update_modbus_buffers(void)
     }
 }
 
+/* ====================== Variáveis estáticas ====================== */
+
+static void *mb_slave_handle = NULL;
+
 /* ============================================================ */
-/* MODBUS TCP (COMPATÍVEL IDF 5.x + esp-modbus atual) */
+/* MODBUS TCP SLAVE - ESP-MODBUS (IDF 5.5)                     */
 /* ============================================================ */
 
 static void modbus_init(void)
 {
-    void *ctx = NULL;
+    ESP_LOGI(TAG, "Inicializando Modbus TCP Slave...");
 
-    ESP_LOGI(TAG, "Inicializando Modbus...");
+    mb_communication_info_t comm_info = {
+        .tcp_opts = {
+            .port      = 502,                    // Porta fixa (recomendado)
+            .uid       = 1,                      // Unit ID / Slave Address
+            .mode      = MB_TCP,
+            .addr_type = MB_IPV4,
+        }
+    };
 
-    /* Inicializa controller (transporte definido via menuconfig) */
-    ESP_ERROR_CHECK(mbc_slave_init_iface(&ctx));
-
-    if (ctx == NULL) {
-        ESP_LOGE(TAG, "Erro: contexto Modbus NULL");
+    // Criar o controller Modbus TCP Slave
+    esp_err_t err = mbc_slave_create_tcp(&comm_info, &mb_slave_handle);
+    if (err != ESP_OK || mb_slave_handle == NULL) {
+        ESP_LOGE(TAG, "Falha ao criar Modbus TCP slave: %s (0x%x)", esp_err_to_name(err), err);
         return;
     }
 
-    /* ================================
-     * DISCRETE INPUTS
-     * ================================ */
+    ESP_LOGI(TAG, "Modbus TCP controller criado com sucesso");
+
+    // Discrete Inputs
     mb_register_area_descriptor_t reg_di = {
-        .type = MB_PARAM_DISCRETE,
+        .type         = MB_PARAM_DISCRETE,
         .start_offset = 0,
-        .address = (void *)mb_di,
-        .size = sizeof(mb_di)
+        .address      = (void *)mb_di,
+        .size         = sizeof(mb_di)
     };
+    ESP_ERROR_CHECK(mbc_slave_set_descriptor(mb_slave_handle, reg_di));
 
-    ESP_ERROR_CHECK(mbc_slave_set_descriptor(ctx, reg_di));
-
-    /* ================================
-     * COILS
-     * ================================ */
+    // Coils (Digital Outputs)
     mb_register_area_descriptor_t reg_coils = {
-        .type = MB_PARAM_COIL,
+        .type         = MB_PARAM_COIL,
         .start_offset = 0,
-        .address = (void *)mb_do,
-        .size = sizeof(mb_do)
+        .address      = (void *)mb_do,
+        .size         = sizeof(mb_do)
     };
+    ESP_ERROR_CHECK(mbc_slave_set_descriptor(mb_slave_handle, reg_coils));
 
-    ESP_ERROR_CHECK(mbc_slave_set_descriptor(ctx, reg_coils));
+    // Iniciar a stack
+    ESP_ERROR_CHECK(mbc_slave_start(mb_slave_handle));
 
-    /* Inicia stack */
-    ESP_ERROR_CHECK(mbc_slave_start(ctx));
-
-    ESP_LOGI(TAG, "Modbus iniciado (TCP via menuconfig)");
+    ESP_LOGI(TAG, "Modbus TCP Slave iniciado com sucesso!");
+    ESP_LOGI(TAG, "Porta: 502 | Unit ID: 1");
 }
 
 /* ============================================================ */
@@ -173,11 +173,10 @@ void plc_coms_init(void)
 
     wifi_init_sta();
 
-    /* Espera conexão real com WiFi (IP obtido) */
-    while (!wifi_connected) {
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
+    /* espera WiFi subir */
+    vTaskDelay(pdMS_TO_TICKS(3000));
 
+    /* IMPORTANTE: só inicia depois do WiFi */
     modbus_init();
 
     xTaskCreatePinnedToCore(
