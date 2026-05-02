@@ -18,43 +18,75 @@
 
 #include "io_map.h"
 #include "driver/gpio.h"
+#include "driver/adc.h"
+#include "driver/ledc.h"
 #include "esp_log.h"
 
 /* Tag para logs */
 static const char *TAG = "io_map";
 
 /* ============================================================
+ * CONFIGURAÇÃO ANALÓGICA (FÁCIL DE EDITAR)
+ * ============================================================ */
+
+/* -------- ENTRADAS ANALÓGICAS (ADC1) -------- */
+#define AI1_CHANNEL ADC1_CHANNEL_6   // GPIO34
+#define AI2_CHANNEL ADC1_CHANNEL_7   // GPIO35
+
+#define AI_ATTEN     ADC_ATTEN_DB_11   // 0–3.3V
+#define AI_WIDTH     ADC_WIDTH_BIT_12  // 0–4095
+
+#define AI1_THRESHOLD 2000
+#define AI2_THRESHOLD 2000
+
+/* -------- SAÍDAS ANALÓGICAS (PWM) -------- */
+#define AO1_GPIO    25
+#define AO2_GPIO    26
+
+#define AO1_CHANNEL LEDC_CHANNEL_0
+#define AO2_CHANNEL LEDC_CHANNEL_1
+
+#define AO_TIMER    LEDC_TIMER_0
+#define AO_MODE     LEDC_HIGH_SPEED_MODE
+
+#define AO_FREQ     5000
+#define AO_RES      LEDC_TIMER_10_BIT  // 0–1023
+
+#define AO1_DUTY_ON 512
+#define AO2_DUTY_ON 256
+
+#define AO_DUTY_OFF 0
+
+/* ============================================================
  * DOUBLE BUFFER - ENTRADAS
  * ============================================================ */
 
-/* Buffer usado exclusivamente pelo PLC (core 1) */
 static bool di_buffer_plc[NUM_DI] = {0};
-
-/* Snapshot usado pela comunicação (core 0) */
 static bool di_buffer_com[NUM_DI] = {0};
 
 /* ============================================================
  * DOUBLE BUFFER - SAÍDAS
  * ============================================================ */
 
-/* Escrito pelo PLC */
 static bool do_buffer_plc[NUM_DO] = {0};
-
-/* Visível para comunicação e hardware */
 static bool do_buffer_com[NUM_DO] = {0};
+
+/* ============================================================
+ * ANALÓGICO - BUFFERS INTERNOS
+ * ============================================================ */
+
+static uint16_t ai_raw[2] = {0};
+static uint16_t ao_raw[2] = {0};  // guardar duty atual
 
 /* ============================================================
  * ABSTRAÇÃO DE HARDWARE
  * ============================================================ */
 
-/* Tipos de interface possíveis */
 typedef enum {
     IO_TYPE_GPIO,
     IO_TYPE_I2C,
-    IO_TYPE_SHIFTREG
 } io_type_t;
 
-/* Estrutura genérica de mapeamento */
 typedef struct {
     io_type_t type;
 
@@ -66,40 +98,74 @@ typedef struct {
             uint8_t pin;
         } i2c;
 
-        struct {
-            uint8_t bit;
-        } shift;
-
     } hw;
 
 } io_map_entry_t;
 
 /* ============================================================
- * MAPEAMENTO DOS CANAIS (FACILMENTE EXPANSÍVEL)
+ * MAPEAMENTO
  * ============================================================ */
 
-/* Entradas digitais */
 static const io_map_entry_t di_map[NUM_DI] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_16 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_17 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_18 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_19 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_21 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_22 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_4 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_5 }
 };
 
-/* Saídas digitais */
 static const io_map_entry_t do_map[NUM_DO] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_25 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_26 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_13 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_14 }
 };
 
 /* ============================================================
- * LEITURA FÍSICA (GENÉRICA)
+ * ANALOG READ
+ * ============================================================ */
+
+bool analog_read(uint8_t ch)
+{
+    if (ch == 0) {
+        return (ai_raw[0] > AI1_THRESHOLD);
+    }
+
+    if (ch == 1) {
+        return (ai_raw[1] > AI2_THRESHOLD);
+    }
+
+    return false;
+}
+
+/* ============================================================
+ * ANALOG WRITE (PWM)
+ * ============================================================ */
+
+void analog_write(uint8_t ch, bool v)
+{
+    uint32_t duty = AO_DUTY_OFF;
+
+    if (ch == 0) {
+        duty = v ? AO1_DUTY_ON : AO_DUTY_OFF;
+        ledc_set_duty(AO_MODE, AO1_CHANNEL, duty);
+        ledc_update_duty(AO_MODE, AO1_CHANNEL);
+        ao_raw[0] = duty;
+    }
+
+    else if (ch == 1) {
+        duty = v ? AO2_DUTY_ON : AO_DUTY_OFF;
+        ledc_set_duty(AO_MODE, AO2_CHANNEL, duty);
+        ledc_update_duty(AO_MODE, AO2_CHANNEL);
+        ao_raw[1] = duty;
+    }
+}
+
+/* ============================================================
+ * LEITURA FÍSICA DIGITAL
  * ============================================================ */
 
 static bool read_physical_input(uint8_t ch)
@@ -107,28 +173,15 @@ static bool read_physical_input(uint8_t ch)
     const io_map_entry_t *e = &di_map[ch];
 
     switch (e->type) {
-
         case IO_TYPE_GPIO:
-            /* Entrada ativa em nível alto */
             return gpio_get_level(e->hw.gpio);
-
-        case IO_TYPE_I2C:
-            /* FUTURO: implementar driver */
-            // return i2c_expander_read(e->hw.i2c.device, e->hw.i2c.pin);
-            return false;
-
-        case IO_TYPE_SHIFTREG:
-            /* FUTURO: implementar driver */
-            // return shiftreg_read(e->hw.shift.bit);
-            return false;
-
         default:
             return false;
     }
 }
 
 /* ============================================================
- * ESCRITA FÍSICA (GENÉRICA)
+ * ESCRITA FÍSICA DIGITAL
  * ============================================================ */
 
 static void write_physical_output(uint8_t ch, bool value)
@@ -136,41 +189,25 @@ static void write_physical_output(uint8_t ch, bool value)
     const io_map_entry_t *e = &do_map[ch];
 
     switch (e->type) {
-
         case IO_TYPE_GPIO:
             gpio_set_level(e->hw.gpio, value ? 1 : 0);
             break;
-
-        case IO_TYPE_I2C:
-            /* FUTURO */
-            // i2c_expander_write(...);
-            break;
-
-        case IO_TYPE_SHIFTREG:
-            /* FUTURO */
-            // shiftreg_write(...);
-            break;
-
         default:
             break;
     }
 }
 
 /* ============================================================
- * INICIALIZAÇÃO DO HARDWARE
+ * INIT
  * ============================================================ */
 
 void io_init(void)
 {
     gpio_config_t io_conf = {0};
 
-    /* ================================
-     * CONFIGURAÇÃO DAS ENTRADAS
-     * ================================ */
+    /* INPUTS */
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;  // evita flutuação
-    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
 
     for (uint8_t i = 0; i < NUM_DI; i++) {
         if (di_map[i].type == IO_TYPE_GPIO) {
@@ -179,11 +216,8 @@ void io_init(void)
         }
     }
 
-    /* ================================
-     * CONFIGURAÇÃO DAS SAÍDAS
-     * ================================ */
+    /* OUTPUTS */
     io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
     for (uint8_t i = 0; i < NUM_DO; i++) {
         if (do_map[i].type == IO_TYPE_GPIO) {
@@ -193,7 +227,42 @@ void io_init(void)
         }
     }
 
-    ESP_LOGI(TAG, "IO inicializado com sucesso");
+    /* ADC */
+    adc1_config_width(AI_WIDTH);
+    adc1_config_channel_atten(AI1_CHANNEL, AI_ATTEN);
+    adc1_config_channel_atten(AI2_CHANNEL, AI_ATTEN);
+
+    /* PWM TIMER */
+    ledc_timer_config_t timer = {
+        .speed_mode = AO_MODE,
+        .timer_num = AO_TIMER,
+        .duty_resolution = AO_RES,
+        .freq_hz = AO_FREQ,
+        .clk_cfg = LEDC_AUTO_CLK
+    };
+    ledc_timer_config(&timer);
+
+    /* PWM CHANNELS */
+    ledc_channel_config_t ch0 = {
+        .gpio_num = AO1_GPIO,
+        .speed_mode = AO_MODE,
+        .channel = AO1_CHANNEL,
+        .timer_sel = AO_TIMER,
+        .duty = 0
+    };
+
+    ledc_channel_config_t ch1 = {
+        .gpio_num = AO2_GPIO,
+        .speed_mode = AO_MODE,
+        .channel = AO2_CHANNEL,
+        .timer_sel = AO_TIMER,
+        .duty = 0
+    };
+
+    ledc_channel_config(&ch0);
+    ledc_channel_config(&ch1);
+
+    ESP_LOGI(TAG, "IO inicializado (digital + analogico)");
 }
 
 /* ============================================================
@@ -211,6 +280,10 @@ void di_update(void)
 
         /* Atualiza snapshot para comunicação */
         di_buffer_com[i] = value;
+
+        /* === ANALÓGICO === */
+        ai_raw[0] = adc1_get_raw(AI1_CHANNEL);
+        ai_raw[1] = adc1_get_raw(AI2_CHANNEL);
     }
 }
 
@@ -271,4 +344,14 @@ bool do_get(uint8_t channel)
     return do_buffer_com[channel];
 }
 
-/* */
+uint16_t ai_get_raw(uint8_t ch)
+{
+    if (ch >= 2) return 0;
+    return ai_raw[ch];
+}
+
+uint16_t ao_get_raw(uint8_t ch)
+{
+    if (ch >= 2) return 0;
+    return ao_raw[ch];
+}

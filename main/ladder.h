@@ -56,4 +56,18 @@ static inline void Write_U_b_YO4(BOOL v) { do_write(3, v); }
 static inline void Write_U_b_YO5(BOOL v) { do_write(4, v); }
 static inline void Write_U_b_YO6(BOOL v) { do_write(5, v); }
 
+/* ============================================================
+ * ENTRADAS ANALÓGICAS
+ * ============================================================ */
+
+static inline BOOL Read_U_b_XAI1(void) { return analog_read(0); }
+static inline BOOL Read_U_b_XAI2(void) { return analog_read(1); }
+
+/* ============================================================
+ * SAÍDAS ANALÓGICAS
+ * ============================================================ */
+
+static inline void Write_U_b_YAO1(BOOL v) { analog_write(0, v); }
+static inline void Write_U_b_YAO2(BOOL v) { analog_write(1, v); }
+
 #endif /* LADDER_H */
