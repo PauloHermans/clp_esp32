@@ -106,6 +106,24 @@ PROTO(BOOL Read_U_b_YO6(void);)
 PROTO(void Write_U_b_YO6(BOOL v);)
 
 
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XAI1(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YAO1(void);)
+PROTO(void Write_U_b_YAO1(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XAI2(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YAO2(void);)
+PROTO(void Write_U_b_YAO2(BOOL v);)
+
+
 
 /* Call this function once per PLC cycle. You are responsible for calling
    it at the interval that you specified in the MCU configuration when you
@@ -205,6 +223,30 @@ void PlcCycle(void)
     }
     
     Write_U_b_YO6(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 7 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XAI1()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YAO1(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 8 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XAI2()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YAO2(Read_I_b_rung_top());
     
     /* ] finish series */
 }

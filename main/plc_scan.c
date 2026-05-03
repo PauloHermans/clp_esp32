@@ -152,7 +152,7 @@ void plc_scan_start(void)
         "plc_scan",      /* Nome */
         4096,            /* Stack */
         NULL,            /* Parâmetros */
-        10,              /* Prioridade alta */
+        configMAX_PRIORITIES - 1,              /* Prioridade alta */
         NULL,            /* Handle */
         1                /* Core dedicado */
     );

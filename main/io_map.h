@@ -50,6 +50,12 @@ void do_write(uint8_t channel, bool value);
  * Cada bit do mask corresponde a uma saída (bit 0 → DO0) */
 void do_write_all(uint32_t mask);
 
+/* Leitura analógica (com threshold → BOOL para o ladder) */
+bool analog_read(uint8_t ch);
+
+/* Escrita analógica (PWM controlado por BOOL do ladder) */
+void analog_write(uint8_t ch, bool value);
+
 /* Aplica o buffer de saídas ao hardware físico.
  * Deve ser chamado ao final de cada ciclo de scan do PLC. */
 void do_apply_outputs(void);

@@ -18,22 +18,25 @@
 
 #include "io_map.h"
 #include "driver/gpio.h"
-#include "driver/adc.h"
+#include "esp_adc/adc_oneshot.h"
+#include "hal/adc_types.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
 
 /* Tag para logs */
 static const char *TAG = "io_map";
 
+static adc_oneshot_unit_handle_t adc_handle;
+
 /* ============================================================
  * CONFIGURAÇÃO ANALÓGICA (FÁCIL DE EDITAR)
  * ============================================================ */
 
 /* -------- ENTRADAS ANALÓGICAS (ADC1) -------- */
-#define AI1_CHANNEL ADC1_CHANNEL_6   // GPIO34
-#define AI2_CHANNEL ADC1_CHANNEL_7   // GPIO35
+#define AI1_CHANNEL ADC_CHANNEL_6   // GPIO34
+#define AI2_CHANNEL ADC_CHANNEL_7   // GPIO35
 
-#define AI_ATTEN     ADC_ATTEN_DB_11   // 0–3.3V
+#define AI_ATTEN     ADC_ATTEN_DB_12   // 0–3.3V
 #define AI_WIDTH     ADC_WIDTH_BIT_12  // 0–4095
 
 #define AI1_THRESHOLD 2000
@@ -112,11 +115,11 @@ static const io_map_entry_t di_map[NUM_DI] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_18 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_19 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_4 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_5 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 }
 };
 
 static const io_map_entry_t do_map[NUM_DO] = {
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_12 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 },
@@ -131,11 +134,11 @@ static const io_map_entry_t do_map[NUM_DO] = {
 bool analog_read(uint8_t ch)
 {
     if (ch == 0) {
-        return (ai_raw[0] > AI1_THRESHOLD);
+        return (ai_raw[0] < AI1_THRESHOLD);
     }
 
     if (ch == 1) {
-        return (ai_raw[1] > AI2_THRESHOLD);
+        return (ai_raw[1] < AI2_THRESHOLD);
     }
 
     return false;
@@ -227,10 +230,21 @@ void io_init(void)
         }
     }
 
-    /* ADC */
-    adc1_config_width(AI_WIDTH);
-    adc1_config_channel_atten(AI1_CHANNEL, AI_ATTEN);
-    adc1_config_channel_atten(AI2_CHANNEL, AI_ATTEN);
+    /* ADC INIT (ONESHOT) */
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&init_config, &adc_handle);
+
+    /* Configuração do canal AI1 */
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_12,
+        .atten = AI_ATTEN
+    };
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_6, &config);
+
+    /* Configuração do canal AI2 */
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_7, &config);
 
     /* PWM TIMER */
     ledc_timer_config_t timer = {
@@ -262,7 +276,7 @@ void io_init(void)
     ledc_channel_config(&ch0);
     ledc_channel_config(&ch1);
 
-    ESP_LOGI(TAG, "IO inicializado (digital + analogico)");
+    //ESP_LOGI(TAG, "IO inicializado (digital + analogico)");
 }
 
 /* ============================================================
@@ -280,11 +294,14 @@ void di_update(void)
 
         /* Atualiza snapshot para comunicação */
         di_buffer_com[i] = value;
-
-        /* === ANALÓGICO === */
-        ai_raw[0] = adc1_get_raw(AI1_CHANNEL);
-        ai_raw[1] = adc1_get_raw(AI2_CHANNEL);
     }
+    /* === ANALÓGICO === */
+    int raw = 0;
+    adc_oneshot_read(adc_handle, ADC_CHANNEL_6, &raw);
+    ai_raw[0] = raw;
+
+    adc_oneshot_read(adc_handle, ADC_CHANNEL_7, &raw);
+    ai_raw[1] = raw;
 }
 
 /* ============================================================

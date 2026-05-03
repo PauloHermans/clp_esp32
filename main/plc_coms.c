@@ -21,8 +21,8 @@
 
 /* ============================================================ */
 
-#define WIFI_SSID      "Wifi Paulo"
-#define WIFI_PASSWORD  "timmermans"
+#define WIFI_SSID      "YOURSSID"
+#define WIFI_PASSWORD  "YOURPASSWORD"
 
 static const char *TAG = "plc_coms";
 
@@ -183,7 +183,7 @@ static void modbus_update_task(void *arg)
 {
     while (1) {
         update_modbus_buffers();
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
