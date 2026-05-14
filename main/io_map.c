@@ -114,17 +114,17 @@ static const io_map_entry_t di_map[NUM_DI] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_17 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_18 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_19 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_4 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_36 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_39 }
 };
 
 static const io_map_entry_t do_map[NUM_DO] = {
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_12 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_13 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_14 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_13 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_14 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 }
 };
 
 /* ============================================================

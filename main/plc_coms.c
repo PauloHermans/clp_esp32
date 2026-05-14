@@ -21,8 +21,8 @@
 
 /* ============================================================ */
 
-#define WIFI_SSID      "YOURSSID"
-#define WIFI_PASSWORD  "YOURPASSWORD"
+#define WIFI_SSID      "Wifi Paulo"
+#define WIFI_PASSWORD  "timmermans"
 
 static const char *TAG = "plc_coms";
 

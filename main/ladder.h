@@ -38,23 +38,23 @@ typedef uint8_t BOOL;
  * ENTRADAS DIGITAIS
  * ============================================================ */
 
-static inline BOOL Read_U_b_XI1(void) { return di_read(0); }
-static inline BOOL Read_U_b_XI2(void) { return di_read(1); }
-static inline BOOL Read_U_b_XI3(void) { return di_read(2); }
-static inline BOOL Read_U_b_XI4(void) { return di_read(3); }
-static inline BOOL Read_U_b_XI5(void) { return di_read(4); }
-static inline BOOL Read_U_b_XI6(void) { return di_read(5); }
+static inline BOOL Read_U_b_XDI1(void) { return di_read(0); }
+static inline BOOL Read_U_b_XDI2(void) { return di_read(1); }
+static inline BOOL Read_U_b_XDI3(void) { return di_read(2); }
+static inline BOOL Read_U_b_XDI4(void) { return di_read(3); }
+static inline BOOL Read_U_b_XDI5(void) { return di_read(4); }
+static inline BOOL Read_U_b_XDI6(void) { return di_read(5); }
 
 /* ============================================================
  * SAÍDAS DIGITAIS
  * ============================================================ */
 
-static inline void Write_U_b_YO1(BOOL v) { do_write(0, v); }
-static inline void Write_U_b_YO2(BOOL v) { do_write(1, v); }
-static inline void Write_U_b_YO3(BOOL v) { do_write(2, v); }
-static inline void Write_U_b_YO4(BOOL v) { do_write(3, v); }
-static inline void Write_U_b_YO5(BOOL v) { do_write(4, v); }
-static inline void Write_U_b_YO6(BOOL v) { do_write(5, v); }
+static inline void Write_U_b_YDO1(BOOL v) { do_write(0, v); }
+static inline void Write_U_b_YDO2(BOOL v) { do_write(1, v); }
+static inline void Write_U_b_YDO3(BOOL v) { do_write(2, v); }
+static inline void Write_U_b_YDO4(BOOL v) { do_write(3, v); }
+static inline void Write_U_b_YDO5(BOOL v) { do_write(4, v); }
+static inline void Write_U_b_YDO6(BOOL v) { do_write(5, v); }
 
 /* ============================================================
  * ENTRADAS ANALÓGICAS

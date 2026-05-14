@@ -48,17 +48,17 @@ STATIC BOOL I_b_rung_top = 0;
 #define Write_I_b_rung_top(x) I_b_rung_top = x
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI1(void);)
+PROTO(extern BOOL Read_U_b_XDI1(void);)
 
 STATIC SWORD U_i_TTON1 = 0;
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO1(void);)
-PROTO(void Write_U_b_YO1(BOOL v);)
+PROTO(BOOL Read_U_b_YDO1(void);)
+PROTO(void Write_U_b_YDO1(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI2(void);)
+PROTO(extern BOOL Read_U_b_XDI2(void);)
 
 STATIC BOOL I_b_TTOF1_antiglitch = 0;
 #define Read_I_b_TTOF1_antiglitch() I_b_TTOF1_antiglitch
@@ -66,44 +66,44 @@ STATIC BOOL I_b_TTOF1_antiglitch = 0;
 STATIC SWORD U_i_TTOF1 = 0;
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO2(void);)
-PROTO(void Write_U_b_YO2(BOOL v);)
+PROTO(BOOL Read_U_b_YDO2(void);)
+PROTO(void Write_U_b_YDO2(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI3(void);)
+PROTO(extern BOOL Read_U_b_XDI3(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO3(void);)
-PROTO(void Write_U_b_YO3(BOOL v);)
+PROTO(BOOL Read_U_b_YDO3(void);)
+PROTO(void Write_U_b_YDO3(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI4(void);)
+PROTO(extern BOOL Read_U_b_XDI4(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO4(void);)
-PROTO(void Write_U_b_YO4(BOOL v);)
+PROTO(BOOL Read_U_b_YDO4(void);)
+PROTO(void Write_U_b_YDO4(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI5(void);)
+PROTO(extern BOOL Read_U_b_XDI5(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO5(void);)
-PROTO(void Write_U_b_YO5(BOOL v);)
+PROTO(BOOL Read_U_b_YDO5(void);)
+PROTO(void Write_U_b_YDO5(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XI6(void);)
+PROTO(extern BOOL Read_U_b_XDI6(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YO6(void);)
-PROTO(void Write_U_b_YO6(BOOL v);)
+PROTO(BOOL Read_U_b_YDO6(void);)
+PROTO(void Write_U_b_YDO6(BOOL v);)
 
 
 /* You provide this function. */
@@ -136,7 +136,7 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI1()) {
+    if(!Read_U_b_XDI1()) {
         Write_I_b_rung_top(0);
     }
     
@@ -149,7 +149,7 @@ void PlcCycle(void)
         U_i_TTON1 = 0;
     }
     
-    Write_U_b_YO1(Read_I_b_rung_top());
+    Write_U_b_YDO1(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -157,7 +157,7 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI2()) {
+    if(!Read_U_b_XDI2()) {
         Write_I_b_rung_top(0);
     }
     
@@ -174,7 +174,7 @@ void PlcCycle(void)
         U_i_TTOF1 = 0;
     }
     
-    Write_U_b_YO2(Read_I_b_rung_top());
+    Write_U_b_YDO2(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -182,11 +182,11 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI3()) {
+    if(!Read_U_b_XDI3()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YO3(Read_I_b_rung_top());
+    Write_U_b_YDO3(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -194,11 +194,11 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI4()) {
+    if(!Read_U_b_XDI4()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YO4(Read_I_b_rung_top());
+    Write_U_b_YDO4(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -206,11 +206,11 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI5()) {
+    if(!Read_U_b_XDI5()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YO5(Read_I_b_rung_top());
+    Write_U_b_YDO5(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -218,11 +218,11 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XI6()) {
+    if(!Read_U_b_XDI6()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YO6(Read_I_b_rung_top());
+    Write_U_b_YDO6(Read_I_b_rung_top());
     
     /* ] finish series */
     
