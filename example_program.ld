@@ -1,0 +1,61 @@
+LDmicro0.1
+MICRO=ANSI C Code
+CYCLE=1000
+CRYSTAL=4000000
+BAUD=2400
+COMPILED=C:\Users\pherm\Documents\PLCforESP\clp_esp32\main\ladder.c
+
+IO LIST
+    XAI1 at 0
+    XAI2 at 0
+    XDI1 at 0
+    XDI2 at 0
+    XDI3 at 0
+    XDI4 at 0
+    XDI5 at 0
+    XDI6 at 0
+    YAO1 at 0
+    YAO2 at 0
+    YDO1 at 0
+    YDO2 at 0
+    YDO3 at 0
+    YDO4 at 0
+    YDO5 at 0
+    YDO6 at 0
+END
+
+PROGRAM
+RUNG
+    CONTACTS XDI1 0
+    TON TTON1 5000000
+    COIL YDO1 0 0 0
+END
+RUNG
+    CONTACTS XDI2 0
+    TOF TTOF1 2000000
+    COIL YDO2 0 0 0
+END
+RUNG
+    CONTACTS XDI3 0
+    COIL YDO3 0 0 0
+END
+RUNG
+    CONTACTS XDI4 0
+    COIL YDO4 0 0 0
+END
+RUNG
+    CONTACTS XDI5 0
+    COIL YDO5 0 0 0
+END
+RUNG
+    CONTACTS XDI6 0
+    COIL YDO6 0 0 0
+END
+RUNG
+    CONTACTS XAI1 0
+    COIL YAO1 0 0 0
+END
+RUNG
+    CONTACTS XAI2 0
+    COIL YAO2 0 0 0
+END
