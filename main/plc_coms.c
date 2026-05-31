@@ -21,8 +21,8 @@
 
 /* ============================================================ */
 
-#define WIFI_SSID      "Wifi Paulo"
-#define WIFI_PASSWORD  "timmermans"
+#define WIFI_SSID      "SSID" // coloque o nome da rede Wi-Fi aqui
+#define WIFI_PASSWORD  "PASSWORD" // coloque a senha da rede Wi-Fi aqui
 
 static const char *TAG = "plc_coms";
 
