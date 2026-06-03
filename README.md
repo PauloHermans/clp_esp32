@@ -1,5 +1,7 @@
 # CLP Didático Open-Source Baseado em ESP32
 
+## Status: Em Andamento
+
 ## Descrição
 
 Este projeto implementa um Controlador Lógico Programável (CLP) didático utilizando o microcontrolador ESP32 e o framework ESP-IDF.
