@@ -37,6 +37,12 @@
 /* Saídas analógicas (AO1, AO2) */
 #define NUM_AO 2
 
+/* Quantidade de entradas de extensão (DI1...DI8) */
+#define NUM_EDI 8
+
+/* Quantidade de saídas de extensão (EDO1...EDO8) */
+#define NUM_EDO 8
+
 /* Inicialização do hardware de IO */
 void io_init(void);
 
@@ -78,5 +84,16 @@ uint16_t ai_get_raw(uint8_t ch);
  * Range típico: 0–1023 (dependente da resolução configurada)
  */
 uint16_t ao_get_raw(uint8_t ch);
+
+/* Leitura para as entradas do módulo mcp23017
+ */
+bool i2c_di_read(uint8_t channel);
+
+/* Escrita para as saidas do módulo mcp23017
+ */
+void i2c_do_write(uint8_t channel, bool value);
+
+
+void mcp23017_update(void);
 
 #endif /* IO_MAP_H */

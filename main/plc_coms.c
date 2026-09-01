@@ -21,9 +21,6 @@
 
 /* ============================================================ */
 
-#define WIFI_SSID      "Wifi Paulo"
-#define WIFI_PASSWORD  "timmermans"
-
 static const char *TAG = "plc_coms";
 
 /* ============================================================ */
@@ -179,11 +176,28 @@ static void modbus_init(void)
 /* TASK */
 /* ============================================================ */
 
-static void modbus_update_task(void *arg)
+static void plc_com_task(void *arg)
 {
+    TickType_t last_wake = xTaskGetTickCount();
+
+    uint8_t modbus_counter = 0;
+
     while (1) {
-        update_modbus_buffers();
-        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        /* Atualiza periféricos externos */
+        mcp23017_update();
+
+        /* Atualiza snapshot Modbus */
+        /* Modbus: executado a cada 1000 ms */
+        if (modbus_counter >= 99) {
+            update_modbus_buffers();
+            modbus_counter = 0;
+        }
+
+        vTaskDelayUntil(
+            &last_wake,
+            pdMS_TO_TICKS(10)
+        );
     }
 }
 
@@ -206,8 +220,8 @@ void plc_coms_init(void)
     modbus_init();
 
     xTaskCreatePinnedToCore(
-        modbus_update_task,
-        "modbus_update",
+        plc_com_task,
+        "plc_com",
         4096,
         NULL,
         5,

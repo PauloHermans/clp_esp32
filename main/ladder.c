@@ -50,20 +50,23 @@ STATIC BOOL I_b_rung_top = 0;
 /* You provide this function. */
 PROTO(extern BOOL Read_U_b_XDI1(void);)
 
-STATIC SWORD U_i_TTON1 = 0;
+STATIC BOOL I_b_TTOF1_antiglitch = 0;
+#define Read_I_b_TTOF1_antiglitch() I_b_TTOF1_antiglitch
+#define Write_I_b_TTOF1_antiglitch(x) I_b_TTOF1_antiglitch = x
+STATIC SWORD U_i_TTOF1 = 0;
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YDO1(void);)
-PROTO(void Write_U_b_YDO1(BOOL v);)
+PROTO(BOOL Read_U_b_YEDO1(void);)
+PROTO(void Write_U_b_YEDO1(BOOL v);)
 
 
 /* You provide this function. */
 PROTO(extern BOOL Read_U_b_XDI2(void);)
 
-STATIC BOOL I_b_TTOF1_antiglitch = 0;
-#define Read_I_b_TTOF1_antiglitch() I_b_TTOF1_antiglitch
-#define Write_I_b_TTOF1_antiglitch(x) I_b_TTOF1_antiglitch = x
-STATIC SWORD U_i_TTOF1 = 0;
+STATIC BOOL I_b_TTOF2_antiglitch = 0;
+#define Read_I_b_TTOF2_antiglitch() I_b_TTOF2_antiglitch
+#define Write_I_b_TTOF2_antiglitch(x) I_b_TTOF2_antiglitch = x
+STATIC SWORD U_i_TTOF2 = 0;
 
 /* You provide these functions. */
 PROTO(BOOL Read_U_b_YDO2(void);)
@@ -140,27 +143,6 @@ void PlcCycle(void)
         Write_I_b_rung_top(0);
     }
     
-    if(Read_I_b_rung_top()) {
-        if(U_i_TTON1 < 4999) {
-            U_i_TTON1++;
-            Write_I_b_rung_top(0);
-        }
-    } else {
-        U_i_TTON1 = 0;
-    }
-    
-    Write_U_b_YDO1(Read_I_b_rung_top());
-    
-    /* ] finish series */
-    
-    /* start rung 2 */
-    Write_I_b_rung_top(Read_I_b_mcr());
-    
-    /* start series [ */
-    if(!Read_U_b_XDI2()) {
-        Write_I_b_rung_top(0);
-    }
-    
     if(!Read_I_b_TTOF1_antiglitch()) {
         U_i_TTOF1 = 1999;
     }
@@ -172,6 +154,31 @@ void PlcCycle(void)
         }
     } else {
         U_i_TTOF1 = 0;
+    }
+    
+    Write_U_b_YEDO1(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 2 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XDI2()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    if(!Read_I_b_TTOF2_antiglitch()) {
+        U_i_TTOF2 = 1999;
+    }
+    Write_I_b_TTOF2_antiglitch(1);
+    if(!Read_I_b_rung_top()) {
+        if(U_i_TTOF2 < 1999) {
+            U_i_TTOF2++;
+            Write_I_b_rung_top(1);
+        }
+    } else {
+        U_i_TTOF2 = 0;
     }
     
     Write_U_b_YDO2(Read_I_b_rung_top());

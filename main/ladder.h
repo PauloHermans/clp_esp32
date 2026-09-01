@@ -70,4 +70,30 @@ static inline BOOL Read_U_b_XAI2(void) { return analog_read(1); }
 static inline void Write_U_b_YAO1(BOOL v) { analog_write(0, v); }
 static inline void Write_U_b_YAO2(BOOL v) { analog_write(1, v); }
 
+/* ============================================================
+ * ENTRADAS DIGITAIS - MCP23017
+ * ============================================================ */
+
+static inline BOOL Read_U_b_XEDI1(void) { return i2c_di_read(0); }
+static inline BOOL Read_U_b_XEDI2(void) { return i2c_di_read(1); }
+static inline BOOL Read_U_b_XEDI3(void) { return i2c_di_read(2); }
+static inline BOOL Read_U_b_XEDI4(void) { return i2c_di_read(3); }
+static inline BOOL Read_U_b_XEDI5(void) { return i2c_di_read(4); }
+static inline BOOL Read_U_b_XEDI6(void) { return i2c_di_read(5); }
+static inline BOOL Read_U_b_XEDI7(void) { return i2c_di_read(6); }
+static inline BOOL Read_U_b_XEDI8(void) { return i2c_di_read(7); }
+
+/* ============================================================
+ * SAÍDAS DIGITAIS - MCP23017
+ * ============================================================ */
+
+static inline void Write_U_b_YEDO1(BOOL v) { i2c_do_write(0, v); }
+static inline void Write_U_b_YEDO2(BOOL v) { i2c_do_write(1, v); }
+static inline void Write_U_b_YEDO3(BOOL v) { i2c_do_write(2, v); }
+static inline void Write_U_b_YEDO4(BOOL v) { i2c_do_write(3, v); }
+static inline void Write_U_b_YEDO5(BOOL v) { i2c_do_write(4, v); }
+static inline void Write_U_b_YEDO6(BOOL v) { i2c_do_write(5, v); }
+static inline void Write_U_b_YEDO7(BOOL v) { i2c_do_write(6, v); }
+static inline void Write_U_b_YEDO8(BOOL v) { i2c_do_write(7, v); }
+
 #endif /* LADDER_H */

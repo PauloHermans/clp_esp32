@@ -22,14 +22,19 @@
 #include "hal/adc_types.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
+#include "driver/i2c_master.h"
 
 /* Tag para logs */
 static const char *TAG = "io_map";
 
 static adc_oneshot_unit_handle_t adc_handle;
 
+static i2c_master_bus_handle_t i2c_bus_handle;
+
+static i2c_master_dev_handle_t mcp23017_handle;
+
 /* ============================================================
- * CONFIGURAÇÃO ANALÓGICA (FÁCIL DE EDITAR)
+ * CONFIGURAÇÃO ANALÓGICA
  * ============================================================ */
 
 /* -------- ENTRADAS ANALÓGICAS (ADC1) -------- */
@@ -60,6 +65,30 @@ static adc_oneshot_unit_handle_t adc_handle;
 
 #define AO_DUTY_OFF 0
 
+/* ============================================================ */
+/* CONFIGURAÇÃO MCP23017                                        */
+/* ============================================================ */
+
+#define MCP23017_ADDR      0x20
+
+#define MCP23017_SDA_GPIO  GPIO_NUM_21
+#define MCP23017_SCL_GPIO  GPIO_NUM_22
+
+#define MCP23017_FREQ_HZ   100000
+
+/* Registradores MCP23017 */
+#define MCP23017_IODIRA    0x00
+#define MCP23017_IODIRB    0x01
+
+#define MCP23017_GPPUA     0x0C
+#define MCP23017_GPPUB     0x0D
+
+#define MCP23017_GPIOA     0x12
+#define MCP23017_GPIOB     0x13
+
+#define MCP23017_OLATA     0x14
+#define MCP23017_OLATB     0x15
+
 /* ============================================================
  * DOUBLE BUFFER - ENTRADAS
  * ============================================================ */
@@ -78,8 +107,26 @@ static bool do_buffer_com[NUM_DO] = {0};
  * ANALÓGICO - BUFFERS INTERNOS
  * ============================================================ */
 
-static uint16_t ai_raw[2] = {0};
-static uint16_t ao_raw[2] = {0};  // guardar duty atual
+static uint16_t ai_raw[NUM_AI] = {0};
+static uint16_t ao_raw[NUM_AO] = {0};  // guardar duty atual
+
+/* ============================================================
+ * SNAPSHOTS - MCP23017
+ * ============================================================ */
+
+/*
+ * GPA:
+ *   Core 0 escreve
+ *   Core 1 lê
+ */
+static volatile uint8_t mcp_input_snapshot = 0x00;
+
+/*
+ * GPB:
+ *   Core 1 escreve
+ *   Core 0 lê
+ */
+static volatile uint8_t mcp_output_snapshot = 0x00;
 
 /* ============================================================
  * ABSTRAÇÃO DE HARDWARE
@@ -98,7 +145,7 @@ typedef struct {
 
         struct {
             uint8_t device;
-            uint8_t pin;
+            uint8_t pin_adress;
         } i2c;
 
     } hw;
@@ -125,6 +172,28 @@ static const io_map_entry_t do_map[NUM_DO] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 }
+};
+
+static const io_map_entry_t edi_map[NUM_EDI] = {
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 1, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 2, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 3, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 4, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 5, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 6, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 7, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 8, .hw.i2c.device = 1 }
+};
+
+static const io_map_entry_t edo_map[NUM_EDO] = {
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 1, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 2, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 3, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 4, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 5, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 6, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 7, .hw.i2c.device = 1 },
+    { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 8, .hw.i2c.device = 1 }
 };
 
 /* ============================================================
@@ -197,6 +266,28 @@ static void write_physical_output(uint8_t ch, bool value)
             break;
         default:
             break;
+    }
+}
+
+bool i2c_di_read(uint8_t channel)
+{
+    if (channel >= NUM_EDI) {
+        return false;
+    }
+
+    return (mcp_input_snapshot >> channel) & 0x01;
+}
+
+void i2c_do_write(uint8_t channel, bool value)
+{
+    if (channel >= NUM_EDO) {
+        return;
+    }
+
+    if (value) {
+        mcp_output_snapshot |= (1U << channel);
+    } else {
+        mcp_output_snapshot &= ~(1U << channel);
     }
 }
 
@@ -276,7 +367,142 @@ void io_init(void)
     ledc_channel_config(&ch0);
     ledc_channel_config(&ch1);
 
-    //ESP_LOGI(TAG, "IO inicializado (digital + analogico)");
+    ESP_LOGI(TAG, "IO inicializado (digital + analogico)");
+
+    /* Inicia I2C*/
+
+    esp_err_t ret;
+
+    /* -------------------------------------------------------- */
+    /* Configuração do barramento I2C                           */
+    /* -------------------------------------------------------- */
+
+    i2c_master_bus_config_t bus_config = {
+        .i2c_port = I2C_NUM_0,
+        .sda_io_num = MCP23017_SDA_GPIO,
+        .scl_io_num = MCP23017_SCL_GPIO,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true
+    };
+
+    ret = i2c_new_master_bus(&bus_config, &i2c_bus_handle);
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao inicializar barramento I2C: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    /* -------------------------------------------------------- */
+    /* Adiciona o MCP23017 ao barramento                        */
+    /* -------------------------------------------------------- */
+
+    i2c_device_config_t dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = MCP23017_ADDR,
+        .scl_speed_hz = MCP23017_FREQ_HZ
+    };
+
+    ret = i2c_master_bus_add_device(
+        i2c_bus_handle,
+        &dev_config,
+        &mcp23017_handle
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao adicionar MCP23017: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    /* -------------------------------------------------------- */
+    /* Configura GPA como entrada                               */
+    /* Configura GPB como saída                                 */
+    /* -------------------------------------------------------- */
+
+    uint8_t iodira = 0xFF;   // GPA: 11111111 = entradas
+    uint8_t iodirb = 0x00;   // GPB: 00000000 = saídas
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        (uint8_t[]){MCP23017_IODIRA, iodira},
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao configurar IODIRA: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        (uint8_t[]){MCP23017_IODIRB, iodirb},
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao configurar IODIRB: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    /* -------------------------------------------------------- */
+    /* Pull-ups internos de GPA                                 */
+    /* -------------------------------------------------------- */
+
+    uint8_t gppua = 0xFF;    // habilita pull-up em GPA
+    uint8_t gppub = 0x00;    // GPB não precisa de pull-up
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        (uint8_t[]){MCP23017_GPPUA, gppua},
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao configurar GPPUA: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        (uint8_t[]){MCP23017_GPPUB, gppub},
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao configurar GPPUB: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    /* -------------------------------------------------------- */
+    /* Garante que todas as saídas começam desligadas           */
+    /* -------------------------------------------------------- */
+
+    uint8_t output_b = 0x00;
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        (uint8_t[]){MCP23017_OLATB, output_b},
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao inicializar saídas GPB: %s",
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    ESP_LOGI(TAG, "MCP23017 inicializado: GPA=INPUT, GPB=OUTPUT");
 }
 
 /* ============================================================
@@ -302,6 +528,84 @@ void di_update(void)
 
     adc_oneshot_read(adc_handle, ADC_CHANNEL_7, &raw);
     ai_raw[1] = raw;
+}
+
+/* ============================================================
+ * ATUALIZAÇÃO DO MCP23017
+ *
+ * Executada pelo Core 0.
+ *
+ * GPA -> mcp_input_snapshot
+ * mcp_output_snapshot -> GPB
+ * ============================================================ */
+
+void mcp23017_update(void)
+{
+    uint8_t reg;
+    uint8_t input_value;
+    uint8_t output_value;
+
+    /* --------------------------------------------------------
+     * 1. Lê GPA
+     * -------------------------------------------------------- */
+
+    reg = MCP23017_GPIOA;
+
+    esp_err_t ret = i2c_master_transmit_receive(
+        mcp23017_handle,
+        &reg,
+        1,
+        &input_value,
+        1,
+        -1
+    );
+
+    if (ret == ESP_OK) {
+
+        /*
+         * Atualiza o snapshot das entradas.
+         *
+         * Core 0 escreve
+         * Core 1 lê
+         */
+        mcp_input_snapshot = input_value;
+    }
+
+    /* --------------------------------------------------------
+     * 2. Obtém snapshot das saídas
+     * -------------------------------------------------------- */
+
+    /*
+     * Copiamos para uma variável local antes da transmissão.
+     *
+     * Assim, mesmo que o Core 1 altere o snapshot durante
+     * a operação I2C, esta transação permanece consistente.
+     */
+    output_value = mcp_output_snapshot;
+
+    /* --------------------------------------------------------
+     * 3. Escreve GPB
+     * -------------------------------------------------------- */
+
+    uint8_t output_data[2] = {
+        MCP23017_GPIOB,
+        output_value
+    };
+
+    ret = i2c_master_transmit(
+        mcp23017_handle,
+        output_data,
+        2,
+        -1
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGW(
+            TAG,
+            "Falha na atualização do MCP23017: %s",
+            esp_err_to_name(ret)
+        );
+    }
 }
 
 /* ============================================================
