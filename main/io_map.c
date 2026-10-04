@@ -161,19 +161,21 @@ static const io_map_entry_t di_map[NUM_DI] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_17 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_18 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_19 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_36 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_39 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_39 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_36 }
 };
 
 static const io_map_entry_t do_map[NUM_DO] = {
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_13 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_14 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_27 },
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 },
     { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_32 },
-    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_33 }
+    { .type = IO_TYPE_GPIO, .hw.gpio = GPIO_NUM_23 }
 };
 
+
+/*
 static const io_map_entry_t edi_map[NUM_EDI] = {
     { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 1, .hw.i2c.device = 1 },
     { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 2, .hw.i2c.device = 1 },
@@ -195,7 +197,7 @@ static const io_map_entry_t edo_map[NUM_EDO] = {
     { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 7, .hw.i2c.device = 1 },
     { .type = IO_TYPE_I2C, .hw.i2c.pin_adress = 8, .hw.i2c.device = 1 }
 };
-
+*/
 /* ============================================================
  * ANALOG READ
  * ============================================================ */

@@ -74,14 +74,14 @@ static inline void Write_U_b_YAO2(BOOL v) { analog_write(1, v); }
  * ENTRADAS DIGITAIS - MCP23017
  * ============================================================ */
 
-static inline BOOL Read_U_b_XEDI1(void) { return i2c_di_read(0); }
-static inline BOOL Read_U_b_XEDI2(void) { return i2c_di_read(1); }
-static inline BOOL Read_U_b_XEDI3(void) { return i2c_di_read(2); }
-static inline BOOL Read_U_b_XEDI4(void) { return i2c_di_read(3); }
+static inline BOOL Read_U_b_XEDI1(void) { return i2c_di_read(5); }
+static inline BOOL Read_U_b_XEDI2(void) { return i2c_di_read(6); }
+static inline BOOL Read_U_b_XEDI3(void) { return i2c_di_read(7); }
+static inline BOOL Read_U_b_XEDI4(void) { return i2c_di_read(8); }
 static inline BOOL Read_U_b_XEDI5(void) { return i2c_di_read(4); }
-static inline BOOL Read_U_b_XEDI6(void) { return i2c_di_read(5); }
-static inline BOOL Read_U_b_XEDI7(void) { return i2c_di_read(6); }
-static inline BOOL Read_U_b_XEDI8(void) { return i2c_di_read(7); }
+static inline BOOL Read_U_b_XEDI6(void) { return i2c_di_read(3); }
+static inline BOOL Read_U_b_XEDI7(void) { return i2c_di_read(2); }
+static inline BOOL Read_U_b_XEDI8(void) { return i2c_di_read(1); }
 
 /* ============================================================
  * SAÍDAS DIGITAIS - MCP23017
