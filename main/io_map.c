@@ -16,6 +16,9 @@
  * A atualização física ocorre no final do ciclo de scan.
  */
 
+#include <stdbool.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "io_map.h"
 #include "driver/gpio.h"
 #include "esp_adc/adc_oneshot.h"
@@ -44,7 +47,7 @@ static i2c_master_dev_handle_t mcp23017_handle;
 #define AI_ATTEN     ADC_ATTEN_DB_12   // 0–3.3V
 #define AI_WIDTH     ADC_WIDTH_BIT_12  // 0–4095
 
-#define AI1_THRESHOLD 2000
+#define AI1_THRESHOLD 0
 #define AI2_THRESHOLD 2000
 
 /* -------- SAÍDAS ANALÓGICAS (PWM) -------- */
@@ -89,6 +92,13 @@ static i2c_master_dev_handle_t mcp23017_handle;
 #define MCP23017_OLATA     0x14
 #define MCP23017_OLATB     0x15
 
+#define MCP23017_RETRY_INTERVAL_MS 5000
+
+static uint16_t adc_debug_counter = 0;
+
+static bool mcp23017_available = false;
+static TickType_t mcp23017_next_retry = 0;
+
 /* ============================================================
  * DOUBLE BUFFER - ENTRADAS
  * ============================================================ */
@@ -127,6 +137,20 @@ static volatile uint8_t mcp_input_snapshot = 0x00;
  *   Core 0 lê
  */
 static volatile uint8_t mcp_output_snapshot = 0x00;
+
+/*
+ * GPA:
+ *   Core 0 escreve
+ *   Core 1 lê
+ */
+static volatile uint8_t mcp_input_coms = 0x00;
+
+/*
+ * GPB:
+ *   Core 1 escreve
+ *   Core 0 lê
+ */
+static volatile uint8_t mcp_output_coms = 0x00;
 
 /* ============================================================
  * ABSTRAÇÃO DE HARDWARE
@@ -219,6 +243,7 @@ bool analog_read(uint8_t ch)
  * ANALOG WRITE (PWM)
  * ============================================================ */
 
+/*
 void analog_write(uint8_t ch, bool v)
 {
     uint32_t duty = AO_DUTY_OFF;
@@ -235,6 +260,50 @@ void analog_write(uint8_t ch, bool v)
         ledc_set_duty(AO_MODE, AO2_CHANNEL, duty);
         ledc_update_duty(AO_MODE, AO2_CHANNEL);
         ao_raw[1] = duty;
+    }
+}
+*/
+
+void analog_write(uint8_t ch, bool v)
+{
+    uint32_t duty = AO_DUTY_OFF;
+    esp_err_t err;
+
+    if (ch == 0) {
+
+#if AI1_THRESHOLD == 0
+        /* Seguidor de tensão: ADC -> duty PWM */
+        duty = ((uint32_t)ai_raw[0] * 1023U) / 4095U;
+#else
+        /* Comportamento original */
+        duty = v ? AO1_DUTY_ON : AO_DUTY_OFF;
+#endif
+
+        err = ledc_set_duty(AO_MODE, AO1_CHANNEL, duty);
+
+        if (err == ESP_OK) {
+            err = ledc_update_duty(AO_MODE, AO1_CHANNEL);
+        }
+
+        if (err == ESP_OK) {
+            ao_raw[0] = duty;
+        }
+    }
+
+    else if (ch == 1) {
+
+        /* Comportamento original de AO2 */
+        duty = v ? AO2_DUTY_ON : AO_DUTY_OFF;
+
+        err = ledc_set_duty(AO_MODE, AO2_CHANNEL, duty);
+
+        if (err == ESP_OK) {
+            err = ledc_update_duty(AO_MODE, AO2_CHANNEL);
+        }
+
+        if (err == ESP_OK) {
+            ao_raw[1] = duty;
+        }
     }
 }
 
@@ -423,6 +492,9 @@ void io_init(void)
     /* Configura GPB como saída                                 */
     /* -------------------------------------------------------- */
 
+    mcp23017_available = false;
+    mcp23017_next_retry = 0;
+
     uint8_t iodira = 0xFF;   // GPA: 11111111 = entradas
     uint8_t iodirb = 0x00;   // GPB: 00000000 = saídas
 
@@ -504,6 +576,9 @@ void io_init(void)
         return;
     }
 
+    mcp23017_available = true;
+    mcp23017_next_retry = 0;
+
     ESP_LOGI(TAG, "MCP23017 inicializado: GPA=INPUT, GPB=OUTPUT");
 }
 
@@ -530,6 +605,16 @@ void di_update(void)
 
     adc_oneshot_read(adc_handle, ADC_CHANNEL_7, &raw);
     ai_raw[1] = raw;
+
+    /* Diagnóstico temporário: imprime a cada ~250 ms */
+    if (++adc_debug_counter >= 250) {
+        adc_debug_counter = 0;
+
+        ESP_LOGI(TAG, "AI1 raw=%u | AO1 duty=%u/1023 (%.1f%%)",
+                (unsigned int)ai_raw[0],
+                (unsigned int)ao_raw[0],
+                (float)ao_raw[0] * 100.0f / 1023.0f);
+    }
 }
 
 /* ============================================================
@@ -539,6 +624,10 @@ void di_update(void)
  *
  * GPA -> mcp_input_snapshot
  * mcp_output_snapshot -> GPB
+ *
+ * O MCP23017 é um periférico opcional.
+ * Quando está ausente, novas tentativas de comunicação são
+ * realizadas a cada MCP23017_RETRY_INTERVAL_MS.
  * ============================================================ */
 
 void mcp23017_update(void)
@@ -546,6 +635,26 @@ void mcp23017_update(void)
     uint8_t reg;
     uint8_t input_value;
     uint8_t output_value;
+    uint8_t output_data[2];
+
+    TickType_t now = xTaskGetTickCount();
+
+    /* --------------------------------------------------------
+     * MCP23017 indisponível
+     * -------------------------------------------------------- */
+
+    if (!mcp23017_available) {
+
+        if (now < mcp23017_next_retry) {
+            return;
+        }
+
+        /*
+         * Chegou o momento de realizar uma nova tentativa.
+         * A primeira tentativa acontece imediatamente porque
+         * mcp23017_next_retry começa em zero.
+         */
+    }
 
     /* --------------------------------------------------------
      * 1. Lê GPA
@@ -562,16 +671,46 @@ void mcp23017_update(void)
         -1
     );
 
-    if (ret == ESP_OK) {
+    if (ret != ESP_OK) {
 
-        /*
-         * Atualiza o snapshot das entradas.
-         *
-         * Core 0 escreve
-         * Core 1 lê
-         */
-        mcp_input_snapshot = input_value;
+        mcp23017_available = false;
+
+        mcp23017_next_retry =
+            now + pdMS_TO_TICKS(MCP23017_RETRY_INTERVAL_MS);
+
+        ESP_LOGW(
+            TAG,
+            "MCP23017 indisponível: %s. "
+            "Nova tentativa em %d s.",
+            esp_err_to_name(ret),
+            MCP23017_RETRY_INTERVAL_MS / 1000
+        );
+
+        return;
     }
+
+    /*
+     * Se chegou aqui, o MCP respondeu.
+     *
+     * Caso ele estivesse anteriormente offline, significa
+     * que voltou a estar disponível.
+     */
+    if (!mcp23017_available) {
+        ESP_LOGI(TAG, "MCP23017 conectado novamente.");
+    }
+
+    mcp23017_available = true;
+
+    /* --------------------------------------------------------
+     * Atualiza snapshot das entradas
+     * -------------------------------------------------------- */
+
+    /*
+     * Core 0 escreve
+     * Core 1 lê
+     */
+    mcp_input_snapshot = input_value;
+    mcp_input_coms = mcp_input_snapshot;
 
     /* --------------------------------------------------------
      * 2. Obtém snapshot das saídas
@@ -584,15 +723,14 @@ void mcp23017_update(void)
      * a operação I2C, esta transação permanece consistente.
      */
     output_value = mcp_output_snapshot;
+    mcp_output_coms = mcp_output_snapshot;
 
     /* --------------------------------------------------------
      * 3. Escreve GPB
      * -------------------------------------------------------- */
 
-    uint8_t output_data[2] = {
-        MCP23017_GPIOB,
-        output_value
-    };
+    output_data[0] = MCP23017_GPIOB;
+    output_data[1] = output_value;
 
     ret = i2c_master_transmit(
         mcp23017_handle,
@@ -602,11 +740,21 @@ void mcp23017_update(void)
     );
 
     if (ret != ESP_OK) {
+
+        mcp23017_available = false;
+
+        mcp23017_next_retry =
+            now + pdMS_TO_TICKS(MCP23017_RETRY_INTERVAL_MS);
+
         ESP_LOGW(
             TAG,
-            "Falha na atualização do MCP23017: %s",
-            esp_err_to_name(ret)
+            "Falha ao atualizar saídas do MCP23017: %s. "
+            "Nova tentativa em %d s.",
+            esp_err_to_name(ret),
+            MCP23017_RETRY_INTERVAL_MS / 1000
         );
+
+        return;
     }
 }
 
@@ -677,4 +825,16 @@ uint16_t ao_get_raw(uint8_t ch)
 {
     if (ch >= 2) return 0;
     return ao_raw[ch];
+}
+
+bool edi_get(uint8_t channel)
+{
+    if (channel >= NUM_EDI) return false;
+    return (mcp_input_coms >> channel) & 1;
+}
+
+bool edo_get(uint8_t channel)
+{
+    if (channel >= NUM_EDO) return false;
+    return (mcp_output_coms >> channel) & 1;
 }

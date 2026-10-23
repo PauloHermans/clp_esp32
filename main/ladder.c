@@ -50,23 +50,15 @@ STATIC BOOL I_b_rung_top = 0;
 /* You provide this function. */
 PROTO(extern BOOL Read_U_b_XDI1(void);)
 
-STATIC BOOL I_b_TTOF1_antiglitch = 0;
-#define Read_I_b_TTOF1_antiglitch() I_b_TTOF1_antiglitch
-#define Write_I_b_TTOF1_antiglitch(x) I_b_TTOF1_antiglitch = x
-STATIC SWORD U_i_TTOF1 = 0;
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YEDO1(void);)
-PROTO(void Write_U_b_YEDO1(BOOL v);)
+PROTO(BOOL Read_U_b_YDO1(void);)
+PROTO(void Write_U_b_YDO1(BOOL v);)
 
 
 /* You provide this function. */
 PROTO(extern BOOL Read_U_b_XDI2(void);)
 
-STATIC BOOL I_b_TTOF2_antiglitch = 0;
-#define Read_I_b_TTOF2_antiglitch() I_b_TTOF2_antiglitch
-#define Write_I_b_TTOF2_antiglitch(x) I_b_TTOF2_antiglitch = x
-STATIC SWORD U_i_TTOF2 = 0;
 
 /* You provide these functions. */
 PROTO(BOOL Read_U_b_YDO2(void);)
@@ -110,21 +102,75 @@ PROTO(void Write_U_b_YDO6(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XAI1(void);)
+PROTO(extern BOOL Read_U_b_XEDI1(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YAO1(void);)
-PROTO(void Write_U_b_YAO1(BOOL v);)
+PROTO(BOOL Read_U_b_YEDO1(void);)
+PROTO(void Write_U_b_YEDO1(BOOL v);)
 
 
 /* You provide this function. */
-PROTO(extern BOOL Read_U_b_XAI2(void);)
+PROTO(extern BOOL Read_U_b_XEDI2(void);)
 
 
 /* You provide these functions. */
-PROTO(BOOL Read_U_b_YAO2(void);)
-PROTO(void Write_U_b_YAO2(BOOL v);)
+PROTO(BOOL Read_U_b_YEDO2(void);)
+PROTO(void Write_U_b_YEDO2(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI3(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO3(void);)
+PROTO(void Write_U_b_YEDO3(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI4(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO4(void);)
+PROTO(void Write_U_b_YEDO4(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI5(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO5(void);)
+PROTO(void Write_U_b_YEDO5(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI6(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO6(void);)
+PROTO(void Write_U_b_YEDO6(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI7(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO7(void);)
+PROTO(void Write_U_b_YEDO7(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XEDI8(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YEDO8(void);)
+PROTO(void Write_U_b_YEDO8(BOOL v);)
 
 
 
@@ -143,20 +189,7 @@ void PlcCycle(void)
         Write_I_b_rung_top(0);
     }
     
-    if(!Read_I_b_TTOF1_antiglitch()) {
-        U_i_TTOF1 = 1999;
-    }
-    Write_I_b_TTOF1_antiglitch(1);
-    if(!Read_I_b_rung_top()) {
-        if(U_i_TTOF1 < 1999) {
-            U_i_TTOF1++;
-            Write_I_b_rung_top(1);
-        }
-    } else {
-        U_i_TTOF1 = 0;
-    }
-    
-    Write_U_b_YEDO1(Read_I_b_rung_top());
+    Write_U_b_YDO1(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -166,19 +199,6 @@ void PlcCycle(void)
     /* start series [ */
     if(!Read_U_b_XDI2()) {
         Write_I_b_rung_top(0);
-    }
-    
-    if(!Read_I_b_TTOF2_antiglitch()) {
-        U_i_TTOF2 = 1999;
-    }
-    Write_I_b_TTOF2_antiglitch(1);
-    if(!Read_I_b_rung_top()) {
-        if(U_i_TTOF2 < 1999) {
-            U_i_TTOF2++;
-            Write_I_b_rung_top(1);
-        }
-    } else {
-        U_i_TTOF2 = 0;
     }
     
     Write_U_b_YDO2(Read_I_b_rung_top());
@@ -237,11 +257,11 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XAI1()) {
+    if(!Read_U_b_XEDI1()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YAO1(Read_I_b_rung_top());
+    Write_U_b_YEDO1(Read_I_b_rung_top());
     
     /* ] finish series */
     
@@ -249,11 +269,83 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
-    if(!Read_U_b_XAI2()) {
+    if(!Read_U_b_XEDI2()) {
         Write_I_b_rung_top(0);
     }
     
-    Write_U_b_YAO2(Read_I_b_rung_top());
+    Write_U_b_YEDO2(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 9 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI3()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO3(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 10 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI4()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO4(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 11 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI5()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO5(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 12 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI6()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO6(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 13 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI7()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO7(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 14 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XEDI8()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YEDO8(Read_I_b_rung_top());
     
     /* ] finish series */
 }

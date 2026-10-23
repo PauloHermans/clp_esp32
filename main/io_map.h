@@ -76,6 +76,12 @@ bool di_get(uint8_t channel);
 /* Leitura de saída digital (snapshot para comunicação) */
 bool do_get(uint8_t channel);
 
+/* Leitura de entrada digital (snapshot para comunicação) */
+bool edi_get(uint8_t channel);
+
+/* Leitura de saída digital (snapshot para comunicação) */
+bool edo_get(uint8_t channel);
+
 /* Leitura de entrada analógica (valor bruto do ADC)
  * Range típico: 0–4095 (12 bits) */
 uint16_t ai_get_raw(uint8_t ch);

@@ -33,6 +33,12 @@ static uint8_t mb_do[NUM_DO];
 static uint16_t mb_ai[NUM_AI];
 static uint16_t mb_ao[NUM_AO];
 
+static uint8_t mb_edi[NUM_EDI];
+static uint8_t mb_edo[NUM_EDO];
+
+static uint8_t mb_di_modbus[NUM_DI + NUM_EDI];
+static uint8_t mb_do_modbus[NUM_DO + NUM_EDO];
+
 /* ============================================================ */
 /* WIFI EVENT HANDLER (PEGA IP) */
 /* ============================================================ */
@@ -56,10 +62,31 @@ static void wifi_init_sta(void)
 {
     esp_netif_init();
     esp_event_loop_create_default();
-    esp_netif_create_default_wifi_sta();
 
-    esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
-                               &wifi_event_handler, NULL);
+    esp_netif_t *netif = esp_netif_create_default_wifi_sta();
+
+    /* ======================================================== */
+    /* CONFIGURAÇÃO DE IP ESTÁTICO                              */
+    /* ======================================================== */
+
+    esp_netif_dhcpc_stop(netif);
+
+    esp_netif_ip_info_t ip_info = {
+        .ip.addr      = ESP_IP4TOADDR(192, 168, 2, 150),
+        .gw.addr      = ESP_IP4TOADDR(192, 168, 2, 1),
+        .netmask.addr = ESP_IP4TOADDR(255, 255, 255, 0),
+    };
+
+    esp_netif_set_ip_info(netif, &ip_info);
+
+    /* ======================================================== */
+
+    esp_event_handler_register(
+        IP_EVENT,
+        IP_EVENT_STA_GOT_IP,
+        &wifi_event_handler,
+        NULL
+    );
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&cfg);
@@ -73,6 +100,7 @@ static void wifi_init_sta(void)
 
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+
     esp_wifi_start();
     esp_wifi_connect();
 
@@ -87,21 +115,32 @@ static void update_modbus_buffers(void)
 {
     for (uint8_t i = 0; i < NUM_DI; i++) {
         mb_di[i] = di_get(i);
+        mb_di_modbus[i] = mb_di[i];
+    }
+
+    for (uint8_t i = 0; i < NUM_EDI; i++) {
+        mb_edi[i] = edi_get(i);
+        mb_di_modbus[NUM_DI + i] = mb_edi[i];
     }
 
     for (uint8_t i = 0; i < NUM_DO; i++) {
         mb_do[i] = do_get(i);
+        mb_do_modbus[i] = mb_do[i];
     }
+
+    for (uint8_t i = 0; i < NUM_EDO; i++) {
+        mb_edo[i] = edo_get(i);
+        mb_do_modbus[NUM_DO + i] = mb_edo[i];
+    }
+
     for (uint8_t i = 0; i < NUM_AI; i++) {
-        mb_ai[i] = ai_get_raw(i);   // novo getter
+        mb_ai[i] = ai_get_raw(i);
     }
 
     for (uint8_t i = 0; i < NUM_AO; i++) {
-        mb_ao[i] = ao_get_raw(i);   // novo getter
+        mb_ao[i] = ao_get_raw(i);
     }
 }
-
-/* ====================== Variáveis estáticas ====================== */
 
 static void *mb_slave_handle = NULL;
 
@@ -135,8 +174,8 @@ static void modbus_init(void)
     mb_register_area_descriptor_t reg_di = {
         .type         = MB_PARAM_DISCRETE,
         .start_offset = 0,
-        .address      = (void *)mb_di,
-        .size         = sizeof(mb_di)
+        .address      = (void *)mb_di_modbus,
+        .size         = sizeof(mb_di_modbus)
     };
     ESP_ERROR_CHECK(mbc_slave_set_descriptor(mb_slave_handle, reg_di));
 
@@ -144,8 +183,8 @@ static void modbus_init(void)
     mb_register_area_descriptor_t reg_coils = {
         .type         = MB_PARAM_COIL,
         .start_offset = 0,
-        .address      = (void *)mb_do,
-        .size         = sizeof(mb_do)
+        .address      = (void *)mb_do_modbus,
+        .size         = sizeof(mb_do_modbus)
     };
     ESP_ERROR_CHECK(mbc_slave_set_descriptor(mb_slave_handle, reg_coils));
 
@@ -187,9 +226,10 @@ static void plc_com_task(void *arg)
         /* Atualiza periféricos externos */
         mcp23017_update();
 
-        /* Atualiza snapshot Modbus */
-        /* Modbus: executado a cada 1000 ms */
-        if (modbus_counter >= 99) {
+        /* Atualiza snapshot Modbus a cada 1000 ms */
+        modbus_counter++;
+
+        if (modbus_counter >= 100) {
             update_modbus_buffers();
             modbus_counter = 0;
         }
