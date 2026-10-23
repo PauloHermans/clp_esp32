@@ -229,11 +229,11 @@ static const io_map_entry_t edo_map[NUM_EDO] = {
 bool analog_read(uint8_t ch)
 {
     if (ch == 0) {
-        return (ai_raw[0] < AI1_THRESHOLD);
+        return (ai_raw[0] <= AI1_THRESHOLD);
     }
 
     if (ch == 1) {
-        return (ai_raw[1] < AI2_THRESHOLD);
+        return (ai_raw[1] <= AI2_THRESHOLD);
     }
 
     return false;
