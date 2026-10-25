@@ -10,8 +10,8 @@
 #ifndef PLC_COMS_H
 #define PLC_COMS_H
 
-#define WIFI_SSID      "Wifi_lu"
-#define WIFI_PASSWORD  "timmermans"
+#define WIFI_SSID      ""
+#define WIFI_PASSWORD  ""
 
 /* Inicializa comunicação (Wi-Fi + Modbus) */
 void plc_coms_init(void);
