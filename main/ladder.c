@@ -102,6 +102,24 @@ PROTO(void Write_U_b_YDO6(BOOL v);)
 
 
 /* You provide this function. */
+PROTO(extern BOOL Read_U_b_XAI1(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YAO1(void);)
+PROTO(void Write_U_b_YAO1(BOOL v);)
+
+
+/* You provide this function. */
+PROTO(extern BOOL Read_U_b_XAI2(void);)
+
+
+/* You provide these functions. */
+PROTO(BOOL Read_U_b_YAO2(void);)
+PROTO(void Write_U_b_YAO2(BOOL v);)
+
+
+/* You provide this function. */
 PROTO(extern BOOL Read_U_b_XEDI1(void);)
 
 
@@ -257,6 +275,30 @@ void PlcCycle(void)
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
+    if(!Read_U_b_XAI1()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YAO1(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 8 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
+    if(!Read_U_b_XAI2()) {
+        Write_I_b_rung_top(0);
+    }
+    
+    Write_U_b_YAO2(Read_I_b_rung_top());
+    
+    /* ] finish series */
+    
+    /* start rung 9 */
+    Write_I_b_rung_top(Read_I_b_mcr());
+    
+    /* start series [ */
     if(!Read_U_b_XEDI1()) {
         Write_I_b_rung_top(0);
     }
@@ -265,7 +307,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 8 */
+    /* start rung 10 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -277,7 +319,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 9 */
+    /* start rung 11 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -289,7 +331,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 10 */
+    /* start rung 12 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -301,7 +343,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 11 */
+    /* start rung 13 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -313,7 +355,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 12 */
+    /* start rung 14 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -325,7 +367,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 13 */
+    /* start rung 15 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
@@ -337,7 +379,7 @@ void PlcCycle(void)
     
     /* ] finish series */
     
-    /* start rung 14 */
+    /* start rung 16 */
     Write_I_b_rung_top(Read_I_b_mcr());
     
     /* start series [ */
