@@ -1,0 +1,98 @@
+[
+  {
+    "pin": "16",
+    "pinType": "digitalInput",
+    "address": "%IX0.0",
+    "name": "DI1"
+  },
+  {
+    "pin": "17",
+    "pinType": "digitalInput",
+    "address": "%IX0.1",
+    "name": "DI2"
+  },
+  {
+    "pin": "18",
+    "pinType": "digitalInput",
+    "address": "%IX0.2",
+    "name": "DI3"
+  },
+  {
+    "pin": "19",
+    "pinType": "digitalInput",
+    "address": "%IX0.3",
+    "name": "DI4"
+  },
+  {
+    "pin": "36",
+    "pinType": "digitalInput",
+    "address": "%IX0.4",
+    "name": "DI5"
+  },
+  {
+    "pin": "39",
+    "pinType": "digitalInput",
+    "address": "%IX0.5",
+    "name": "DI6"
+  },
+  {
+    "pin": "13",
+    "pinType": "digitalOutput",
+    "address": "%QX0.0",
+    "name": "DO1"
+  },
+  {
+    "pin": "14",
+    "pinType": "digitalOutput",
+    "address": "%QX0.1",
+    "name": "DO2"
+  },
+  {
+    "pin": "23",
+    "pinType": "digitalOutput",
+    "address": "%QX0.2",
+    "name": "DO3"
+  },
+  {
+    "pin": "27",
+    "pinType": "digitalOutput",
+    "address": "%QX0.3",
+    "name": "DO4"
+  },
+  {
+    "pin": "32",
+    "pinType": "digitalOutput",
+    "address": "%QX0.4",
+    "name": "DO5"
+  },
+  {
+    "pin": "33",
+    "pinType": "digitalOutput",
+    "address": "%QX0.5",
+    "name": "DO6"
+  },
+  {
+    "pin": "34",
+    "pinType": "analogInput",
+    "address": "%IW0",
+    "name": "AI1"
+  },
+  {
+    "pin": "35",
+    "pinType": "analogInput",
+    "address": "%IW1",
+    "name": "AI2"
+  },
+  {
+    "pin": "25",
+    "pinType": "analogOutput",
+    "address": "%QW0",
+    "name": "AO1"
+  },
+  {
+    "pin": "26",
+    "pinType": "analogOutput",
+    "address": "%QW1",
+    "name": "AO2"
+  }
+]

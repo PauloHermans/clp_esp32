@@ -1,0 +1,31 @@
+{
+  "deviceBoard": "ESP32 WROOM",
+  "communicationPort": "COM3",
+  "runtimeIpAddress": "127.0.0.1",
+  "compileOnly": false,
+  "communicationConfiguration": {
+    "modbusRTU": {
+      "rtuInterface": "Serial",
+      "rtuBaudRate": "115200",
+      "rtuSlaveId": null,
+      "rtuRS485ENPin": null
+    },
+    "modbusTCP": {
+      "tcpInterface": "Wi-Fi",
+      "tcpMacAddress": "DE:AD:BE:EF:DE:AD",
+      "tcpWifiSSID": "Wifi Paulo",
+      "tcpWifiPassword": "timmermans",
+      "tcpStaticHostConfiguration": {
+        "ipAddress": "192.168.2.150",
+        "dns": "8.8.8.8",
+        "gateway": "192.168.2.1",
+        "subnet": "255.255.255.0"
+      }
+    },
+    "communicationPreferences": {
+      "enabledRTU": false,
+      "enabledTCP": true,
+      "enabledDHCP": false
+    }
+  }
+}
