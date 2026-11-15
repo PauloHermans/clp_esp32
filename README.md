@@ -149,15 +149,16 @@ Permite avaliar o comportamento temporal do controlador.
 
 ### plc_coms.c / plc_coms.h
 
-Módulo de comunicação industrial.
+Módulo de comunicação e integração com dispositivos externos.
 
 Responsável por:
 
-* Inicialização da rede Wi-Fi.
+* Inicialização e gerenciamento da rede Wi-Fi.
 * Configuração do Modbus TCP Slave.
 * Disponibilização das variáveis de processo para sistemas externos.
+* Comunicação com dispositivos e periféricos externos por meio de interfaces como I²C e outros protocolos.
 
-As áreas Modbus são alimentadas a partir de snapshots produzidos pelo núcleo de controle.
+As áreas Modbus são alimentadas a partir de snapshots produzidos pelo núcleo de controle, enquanto as demais interfaces são utilizadas para integração e gerenciamento de dispositivos externos.
 
 ---
 
@@ -169,23 +170,31 @@ Define componentes externos utilizados pelo projeto, incluindo bibliotecas forne
 
 ---
 
-## Arquivo Ladder de Exemplo
+### sdkconfig.defaults
 
-### example_program.ld
+Arquivo de configuração padrão do ESP-IDF, gerado a partir das configurações definidas pelo comando `idf.py menuconfig`.
 
-Programa Ladder de exemplo desenvolvido para o LDmicro.
+Armazena as opções de configuração necessárias para a compilação e execução do projeto, garantindo a compatibilidade entre os componentes utilizados.
 
-Este arquivo deve ser aberto diretamente no software LDmicro.
+Este arquivo é essencial para o funcionamento correto do projeto, pois define configurações específicas do ESP32 e do ambiente ESP-IDF. Sua ausência pode resultar em erros durante a compilação.
 
-O fluxo típico de desenvolvimento é:
+---
 
-1. Abrir o arquivo `.ld` no LDmicro.
-2. Editar a lógica Ladder.
-3. Gerar os arquivos C correspondentes.
-4. Substituir os arquivos gerados no projeto.
-5. Compilar utilizando o ESP-IDF.
+## Programas Ladder de Exemplo
 
-Este procedimento permite desenvolver aplicações de automação industrial utilizando uma interface gráfica Ladder tradicional.
+O projeto disponibiliza programas Ladder de referência, organizados conforme a ferramenta de desenvolvimento utilizada.
+
+### openplc_examples/
+
+Contém programas de exemplo desenvolvidos para o OpenPLC.
+
+### ldmicro_examples/
+
+Contém programas de exemplo desenvolvidos para o LDmicro.
+
+Cada pasta disponibiliza um programa-base que pode ser utilizado como ponto de partida para o desenvolvimento e a modificação de aplicações Ladder.
+
+Os programas devem ser abertos na respectiva ferramenta de desenvolvimento, permitindo editar a lógica de controle e gerar os arquivos necessários para utilização no projeto.
 
 ---
 
