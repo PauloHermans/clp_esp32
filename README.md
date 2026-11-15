@@ -54,6 +54,27 @@ Esta separação evita que tarefas de rede interfiram na execução do ciclo de 
 
 ---
 
+## Projeto de Hardware (EasyEDA)
+
+<badge color="success">Hardware aberto e modificável</badge>
+
+O repositório disponibiliza o projeto completo de hardware desenvolvido no EasyEDA, incluindo os arquivos de esquemático eletrônico e layout das placas de circuito impresso (PCB).
+
+Com esses arquivos, o usuário poderá:
+
+* Consultar e modificar o esquemático eletrônico, incluindo a configuração e os componentes do circuito.
+* Editar o layout da PCB, adaptando o projeto às suas próprias necessidades.
+* Consultar a lista completa de materiais (*Bill of Materials – BOM*), com a identificação dos componentes utilizados.
+
+O projeto foi disponibilizado para permitir não apenas a reprodução do hardware, mas também seu estudo, personalização e aprimoramento por outros desenvolvedores.
+
+Para realizar a importação do projeto:
+1. Baixe o arquivo `.epro2` na pasta easyeda_project
+2. Abra o EasyEDA Pro (pro.easyeda.com)
+3. File → Import → EasyEDA Professional → selecione o arquivo
+
+---
+
 ## Estrutura dos Arquivos
 
 ### main.c
